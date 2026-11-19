@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-5">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4>Редагування профілю ({{ user.username }})</h4>
+                <p class="badge bg-info text-dark">{{ user.get_role_display }}</p>
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary w-100">Зберегти профіль</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        {% if user.is_client %}
+            <div class="card">
+                <div class="card-body">
+                    <h4>Моя історія заявок</h4>
+                    <p>Відкритих: <b>{{ stats.open }}</b> | Вирішених: <b>{{ stats.resolved }}</b> | Закритих: <b>{{ stats.closed }}</b></p>
+                    <ul class="list-group">
+                        {% for t in tickets %}
+                            <li class="list-group-item d-flex justify-content-between">
+                                <a href="{% url 'ticket_detail' t.pk %}">#{{ t.id }} {{ t.title }}</a>
+                                <span class="badge bg-secondary">{{ t.get_status_display }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+        {% elif user.is_agent %}
+            <div class="card">
+                <div class="card-body">
+                    <h4>Мої заявки (Вирішено/Закрито: {{ resolved_count }})</h4>
+                    <ul class="list-group">
+                        {% for t in assigned_tickets %}
+                            <li class="list-group-item d-flex justify-content-between">
+                                <a href="{% url 'ticket_detail' t.pk %}">#{{ t.id }} {{ t.title }}</a>
+                                <span class="badge bg-info text-dark">{{ t.get_status_display }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+        {% elif user.is_manager %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h4>Статистика заявок за статусами</h4>
+                    <ul class="list-group">
+                        {% for item in status_stats %}
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>{{ item.label }}</span>
+                                <b>{{ item.total }}</b>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item">Заявок ще немає</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h4>Навантаження на агентів</h4>
+                    <ul class="list-group">
+                        {% for ag in agents_stats %}
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>{{ ag.username }}</span>
+                                <b>{{ ag.total_assigned }} заявок</b>
+                            </li>
+                        {% empty %}
+                            <li class="list-group-item">Агентів ще немає</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

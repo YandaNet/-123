@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h3>#{{ ticket.id }} — {{ ticket.title }}</h3>
+                    <span class="badge bg-primary fs-6 align-self-start">{{ ticket.get_status_display }}</span>
+                </div>
+                <p class="text-muted">
+                    Категорія: <b>{{ ticket.category.name }}</b> | 
+                    Пріоритет: <b>{{ ticket.get_priority_display }}</b> | 
+                    Виконавець: <b>{{ ticket.assignee.username|default:"Не призначено" }}</b>
+                </p>
+                <hr>
+                <p>{{ ticket.description|linebreaks }}</p>
+                <small class="text-secondary">Автор: {{ ticket.author.username }} | Створено: {{ ticket.created_at|date:"d.m.Y H:i" }}</small>
+            </div>
+        </div>
+
+        <h4>Коментарі</h4>
+        <div class="list-group mb-4">
+            {% for comment in comments %}
+                <div class="list-group-item {% if comment.is_internal %}bg-warning-subtle{% endif %}">
+                    <div class="d-flex justify-content-between">
+                        <b>{{ comment.author.username }} {% if comment.is_internal %}<span class="badge bg-danger">Внутрішній</span>{% endif %}</b>
+                        <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                    <p class="mb-0 mt-1">{{ comment.text }}</p>
+                </div>
+            {% empty %}
+                <p class="text-muted">Коментарів ще немає.</p>
+            {% endfor %}
+        </div>
+
+        {% if not ticket.is_final %}
+            <div class="card mb-5">
+                <div class="card-body">
+                    <h5>Написати коментар</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_comment">
+                        <div class="mb-3">{{ comment_form.text }}</div>
+                        {% if not user.is_client %}
+                            <div class="form-check mb-3">
+                                {{ comment_form.is_internal }}
+                                <label class="form-check-label">Внутрішній коментар (клієнт не побачить)</label>
+                            </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary">Надіслати</button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-secondary">Заявка закрита або відхилена. Коментування та редагування заблоковано.</div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        {% if user.is_agent and not ticket.assignee and ticket.author != user and not ticket.is_final %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="take_ticket">
+                        <button type="submit" class="btn btn-success w-100">Взяти заявку в роботу</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if available_statuses %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5>Змінити статус</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="change_status">
+                        <select name="status" class="form-select mb-3">
+                            {% for code, label in available_statuses %}
+                                <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-dark w-100">Підтвердити перехід</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if user.is_manager and not ticket.is_final %}
+            <div class="card">
+                <div class="card-body">
+                    <h5>Управління менеджера</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="manager_update">
+                        <div class="mb-3">
+                            <label class="form-label">Призначити агента:</label>
+                            <select name="assignee" class="form-select">
+                                <option value="">— Не призначено —</option>
+                                {% for ag in agents %}
+                                    <option value="{{ ag.id }}" {% if ticket.assignee == ag %}selected{% endif %}>{{ ag.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Пріоритет:</label>
+                            <select name="priority" class="form-select">
+                                {% for code, label in ticket.Priority.choices %}
+                                    <option value="{{ code }}" {% if ticket.priority == code %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">Зберегти зміни</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

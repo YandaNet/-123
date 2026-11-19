@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Список заявок</h2>
+    <a href="{% url 'ticket_create' %}" class="btn btn-primary">+ Створити заявку</a>
+</div>
+
+<!-- Панель фільтрації та пошуку -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Пошук за заголовком...">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="">Усі статуси</option>
+                    {% for code, label in statuses %}
+                        <option value="{{ code }}" {% if request.GET.status == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="priority" class="form-select">
+                    <option value="">Усі пріоритети</option>
+                    {% for code, label in priorities %}
+                        <option value="{{ code }}" {% if request.GET.priority == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="category" class="form-select">
+                    <option value="">Усі категорії</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="sort" class="form-select">
+                    <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Новіші спочатку</option>
+                    <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Старіші спочатку</option>
+                    <option value="priority_desc" {% if request.GET.sort == 'priority_desc' %}selected{% endif %}>Пріоритет: високий → низький</option>
+                    <option value="priority_asc" {% if request.GET.sort == 'priority_asc' %}selected{% endif %}>Пріоритет: низький → високий</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-grid">
+                <button type="submit" class="btn btn-dark">Фільтр</button>
+            </div>
+            {% if not user.is_client %}
+            <div class="col-md-3 mt-2">
+                <select name="assignee" class="form-select">
+                    <option value="">Усі виконавці</option>
+                    {% for ag in agents %}
+                        <option value="{{ ag.id }}" {% if request.GET.assignee == ag.id|stringformat:"s" %}selected{% endif %}>{{ ag.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div class="col-md-3 mt-2">
+                <input type="date" name="created_date" value="{{ request.GET.created_date }}" class="form-control">
+            </div>
+            <div class="col-md-2 mt-2">
+                <a href="{% url 'ticket_list' %}" class="btn btn-outline-secondary w-100">Скинути</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Таблиця заявок -->
+<div class="card">
+    <div class="card-body">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Заголовок</th>
+                    <th>Категорія</th>
+                    <th>Пріоритет</th>
+                    <th>Статус</th>
+                    <th>Автор</th>
+                    <th>Виконавець</th>
+                    <th>Створено</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                    <tr>
+                        <td>#{{ ticket.id }}</td>
+                        <td><a href="{% url 'ticket_detail' ticket.pk %}" class="fw-bold text-decoration-none">{{ ticket.title }}</a></td>
+                        <td>{{ ticket.category.name }}</td>
+                        <td><span class="badge bg-secondary">{{ ticket.get_priority_display }}</span></td>
+                        <td><span class="badge bg-info text-dark">{{ ticket.get_status_display }}</span></td>
+                        <td>{{ ticket.author.username }}</td>
+                        <td>{{ ticket.assignee.username|default:"—" }}</td>
+                        <td>{{ ticket.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">Заявок не знайдено.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
